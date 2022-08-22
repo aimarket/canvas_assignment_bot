@@ -21,18 +21,15 @@ def fetchinfo():
     # Maybe set up for a retry, or continue in a retry loop
         e = "connection not established in 3sec and data not recived in 6sec"
         send_Error("Timeout error", e)
-        choice = random.randint(0,999)
         print("retying...")
     except requests.exceptions.TooManyRedirects:
     # Tell the user their URL was bad and try a different one
         e = "redirecting?"
         send_Error("Too many redirects", e)
-        choice = random.randint(0,999)
         print("Retrying....")
     except requests.exceptions.RequestException as e:
     # catastrophic error. bail.
         send_Error("Error occured!", "Please check on ur bot ")
-        choice = random.randint(0,999)
         print("Retrying")
     
     with open("updates.json","wb") as f:
