@@ -1,9 +1,6 @@
-
 import json 
 import requests
 import time
-import os
-import random
 from datetime import datetime
 from pytz import timezone
 
@@ -48,12 +45,13 @@ def send_Error(message, e):
     requests.post(webhook,data=json.dumps(data), headers={"Content-Type": "application/json"})
 
 #send notification to discord
-def send_notification(title,description):
+def send_notification(title,description, url):
     data = {"embeds":[]}
     embed = {}
     embed["title"]=title
-    embed['color']= 65301
+    embed['color']= 0xF77008
     embed["description"] = description
+    embed["url"] = url
     #for all params, see https://discordapp.com/developers/docs/resources/channel#embed-object
     data["embeds"].append(embed)
     requests.post(webhook,data=json.dumps(data), headers={"Content-Type": "application/json"})
@@ -62,7 +60,7 @@ def send_notification(title,description):
 
 #main function
 def main():
-    awake = False #change to False
+    awake = True #change to False
     while(True):
         #check if the bot is awake which is usally after 24 hours
         while(awake):
@@ -76,9 +74,8 @@ def main():
                 if(item["course_id"] == courseID):
                     title = item["plannable"]["title"] #get the title of the update
                     assignment_id = str(item["plannable_id"]) #get the id of the update
+                    html_url = "https://canvas.asu.edu"+item["html_url"] #get the url of the update
                     if("due_at" in item["plannable"]):
-                        due_at = "Due Date: "+ item["plannable"]["due_at"] #get the due date of the update
-
                         #check if assignment has already been posted to discord
                         with open('postedassignments.txt', 'r') as li:
                             newline = li.readline()
@@ -90,11 +87,15 @@ def main():
 
                         #setup dates to see how long until due date
                         mst = timezone('MST') 
-                        current = int(datetime.now(mst).strftime("%Y%m%d"))
-                        due_date = int("".join(item["plannable"]["due_at"].split("T")[0].split("-")))
+                        current = datetime.strptime(datetime.now(mst).strftime("%Y%m%d"), '%Y%m%d').replace(tzinfo=mst)
+                        due_date = datetime.strptime("".join(item["plannable"]["due_at"]), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone('UTC'))
+                        print(due_date)
+                        print("curret date: ", current.date() ," due date: ", due_date.date())
                         #if not posted then post it
-                        if(not already_set and due_date-current < 3):
-                            send_notification(title, due_at)
+                        if(not already_set and (due_date-current).days <= 3):
+                            print("posting: ", title)
+                            description = due_date.astimezone(mst).strftime("%m/%d %I:%M%p")
+                            send_notification(title, description, html_url)
                             file1 = open("postedassignments.txt","a")
                             file1.write("\n"+assignment_id)
                             file1.close()
@@ -102,9 +103,9 @@ def main():
 
             print("done")
             awake = False
-        #refresh every 24hours    
-        print("sleeping 24 hours")
-        time.sleep(86400)
+        #refresh every 6 hours    
+        print("sleeping 6 hours")
+        time.sleep(20000)
         awake = True #change to True to restart the loop
 
 if __name__ == "__main__":
